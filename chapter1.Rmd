@@ -3,11 +3,27 @@
 
 *Write a short description about the course and add a link to your GitHub repository here. This is an R Markdown (.Rmd) file so you should use R Markdown syntax.*
 
+The course will cover the topics *open data, open science and data* - like shown in the course description. Therefor we will use *R, RStudio and GitHub*. 
+
 ```{r}
 # This is a so-called "R chunk" where you can write R code.
 
 date()
 
 ```
-The text continues here.
+
+# General thoughts about this course
+
+**I'm happy to be allowed to take part in this course!** - I don't really know what to expect from this lectures and self-learning content, because I have only used R and RStudio before in shorter projects. But not in the context of 'open data science' - I think these skills - dealing with huge data sets and interpreting them - will become more and more important in future science, but also in all other professions. 
+Right know I'm sitting in the unicafe in Viikki to listen to the lecture in Zoom, but I will have to work on the assignments in the eving and hope to make all the deadlines in time until tomorrow morning. 
+Right now I'm a little bit confused about the 'Git' window in RStudio and why the 'index.html' or 'index.Rmd' does not appear properly. But I'm sure to fix this error/issue later:) 
+I got to know about this course simply about the [Course calaloge](https://studies.helsinki.fi/courses)of the University of Helsinki.
+
+# Thoughts about the self-lerning with 'R for Health Data Science' book
+I had the impression that this book presents the first steps in R with 'tidyverse' packages in a very dense format - which is good! Sometimes, I learning new things and functions from the 'tidy' packages due I mostly coded using baseR before. 
+My favorite topics deal with plotting although this is also one of the more difficult coding things for me. It's simply wonderful to see all the beautiful and colorful plots that make your data easier to understand and better to interpret. Another crucial but less colorful thing is data wrangling - for my bachelor thesis I had to deal with this topic for a very long time and I think I have already some insights, but this data wrangling and manipulation can be very annoying... 
+
+# Code of my GitHub repository is visible below
+
+<https://filibertmoritz.github.io/IODS-project/>
 
