@@ -1,13 +1,147 @@
-# Insert chapter 2 title here
+# Regression and model validation
 
-*Describe the work you have done this week and summarize your learning.*
+## This weeks self learning 
 
-- Describe your work and results clearly. 
-- Assume the reader has an introductory course level understanding of writing and reading R code as well as statistical methods.
-- Assume the reader has no previous knowledge of your data or the more advanced methods you are using.
+This week I studied the recommended chapters from the 'R for Health Data Science' book and 'Regression and model validation' from the book of our lecturer. Afterwards, I worked on the given tasks and tried to describe everything properly in the Rmd file
+
+## Tasks in week 2
+
+**Preparations and data description**
+
+Firstly, I have to load all necessary packages and save some functions in the global environment to avoid issues with identical named functions. 
 
 ```{r}
-date()
+library('tidyverse')
+select <- dplyr::select
+rename <- dplyr::rename
+filter <- dplyr::filter
+library('readr')
+library('data.table')
+# install.packages('rcompanion')
+library('rcompanion')
+library(ggfortify)
+theme_set(theme_test()) # set new 'default' theme for any ggplot 
 ```
 
-Here we go again...
+I load all necessary data for the analysis. The data has been prepared in the first tasks - this is not shown here. In addition, I use the prepared data set from the task to avoid getting troubles from any mistakes in the data preparation.
+Afterwards I explored the data to get an overview. 
+
+```{r}
+# load data
+data <- fread('https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/learning2014.txt') 
+
+# data exploration
+dim(data)
+names(data)
+str(data)
+summary(data)
+```
+The given dataset belongs to a study that was made in Finland at the University of Helsinki to investigate learning approaches in statistics. Participants of the study were students who took the class as introductory course of statistics. The students were divided in three different groups by their motivation in taking the lectures: 
+
+a) **surface approach** (memorizing without understanding and serious lack of understanding - getting forward with minimum trouble), 
+b) **deep approach** (intention to maximize understanding and true commitment to learning - strong need to engage in the actual content of the task), and 
+c) **strategic approach** (the way students organize their studying - apply any strategy that maximizes the chance of achieving the highest possible grades)
+
+From the data exploration I've made in the r-chunk above it is visible that the dataset contains 7 variables, namely gender, age, attitude, deep (learning approach), stra(tegic learning approach), surf(ace learning apporach), and points (in the final exam). For this variables 166 observations exist. NB: All observations were the final exam was graded with 0 points, have been removes beforehand. I don't know the reason behind this, but this could lead to bias in the results. The variables are mostly numeric (attitude, deep, stra, surf), but there are also integer (points and age) such as character (gender) - this one should maybe be transfered in a factor. 
+
+```{r}
+# transfer 'gender' variable to a factorial variable 
+data <- data %>% mutate(gender = factor(gender))
+# doing the same in baseR
+# data$gender <- as.factor(data$gender)
+```
+
+**Plotting some data**
+
+To get a better understanding of the data and have some ideas what dependencies could possibly exist, I plot some data from the given dataset.
+
+```{r}
+# compute some random and very simple plots (not fancy plot adaptations made)
+data %>% ggplot(aes(x = age)) + 
+  geom_histogram()
+data %>% ggplot(aes(x = points)) + 
+  geom_histogram()
+data %>% ggplot(aes(x = gender)) + 
+  geom_bar()
+data %>% ggplot(aes(y = age, x = gender)) + 
+  geom_boxplot()
+
+# provide summary for all variables 
+summary(data)
+  
+```
+From the computed summary statistics and plots to explore the variables its possible to describe the data: 
+
+a) **gender**: There are much more female (110) than male (56) participants in this study. The mean age of male people in this study is slightly higher. 
+b) **age**: Mean age has been computed as 25 1/2 years, min age is 17 and max age is 55. The age distribution seems to fit (well, more or less) the type of poisson distribution with µ =  ~22 years
+c) **points**: The mean result in the final exam was 22.72 points. The min was and the max 33 points. The majority of people got more than 19 points. I can't identify any distribution patterns of this variable. 
+d) **other variables**: Until now, I'm not able to describe the data properly except from the values which are visible in the summary statistics (see above).
+
+**fitting some simple linear regressions and interpret the results**
+
+I chose the 'age' of participants, their general 'attitude' to statistics and the 'deep' learning approach as predictors/explanatory variables to the dependence variable 'points' only additivly due to lack of information about possible interactions.
+
+```{r}
+# remember available variables 
+names(data)
+
+# build linear models in tidyverse syntax
+m1 <- data %>%
+  lm(formula = points ~ age + attitude + deep, data = .)
+
+# print output of the fitted models 
+m1 %>% summary() # the only significant predictor is attitude
+
+# fit new model without unsignificant predictors
+m2 <- data %>% 
+  lm(formula = points ~ attitude, data = .)
+
+# print summary statistics of the new fitted model
+m2 %>% summary()
+
+# provide model comparison table for two fitted linear models 
+print(compareLM(m1, m2)) # m2 should be selected because of parsimony (lower AIC)
+  
+```
+
+Model 1 consists of the formula points ~ age + attitude + deep. The summary statistics provide model characteristics to interpret the fit and significance of single parameters. The intercept of the model function is 15.60773, so the intersection with the y-axis at x = 0 and it seems to be highly significant with three *** (p-value = 8.32e-06). In addition the attitude has a positive impact on the output variable (points) (provided by the slope): each unit 'attitude' seems to increase points per 3.5 units. Also this predictor is highly significant (p-value = 2.56e-09). The other predictors are not significant, so we cannot be sure that the effect of these predictors on the dependent variable is true (p-values of 0.149 for age and 0.423 for deep learning approach, respectively). All in all the model explaines 20.43 of the variability in the data - which means that there are 100-20.43 = 79.57 percent unexplained variability in the data (r-squared) and the adjusted r-squared (with penalty for every added parameter). There are 162 degrees of freedom. 
+
+After removing the statistically not significant predictors 'age' and 'deep' learning approach, the model 2 explained slightly less variability in the data. In addition, the adjusted r-squared had only a value of 0.1856. 
+
+By using the function compareLM() I computed a model comparison model, providing AIC, AICc, BIC for model comparison. NB: Don't mix information theory approaches and p-value related model selection techniques. Even though, the more parsimonous model seems to be favoured by AIC and AICc. 
+
+The final model 2 has an intercept (y value at x = 0) of 11.6372 and a slope of 3.5255 for the predictor 'attitude'. Both intercept and attitude parameters/estimates are significant, the computed standard errors are ~1.8 units and ~0.5 units, respectively. All in all, 'attitude' of the participants of this statistics course seems to have a positive impact on points in the exam (per unit in 'attitude' the mean number of points increases by ~3.5 units). 
+
+**Provide diagnostic plots of the fitted models**
+
+To check linear model assumptions its common to provide some plots checking for any violations in the dataset. 
+
+```{r}
+# plot(m2) # its possible to simply plot the model with the baseR plot function
+autoplot(m2) # do the same with the 'ggfortify' package
+```
+
+The diagnostic plots show 4 different relationships: 
+
+1) Residuals vs Fitted values
+2) Normal QQ-plot
+3) Standardized Residuals vs Fitted Values
+4) Residuals vs Leverage
+
+By them its possible to check for the four assumptions that have to be fullfilled by the dataset: a) Linear relationship between predictors and outcome; b) Independence of residuals; c) Normal distribution of residuals; d) Equal variance of residuals (Harrison and Pius, 2021). 
+
+1) The plot seems to indicate that there are some issues with independence of residuals: Somehow the residual distribution for higher fitted values seems to decrease. The assumption of constant variance is not justified. maybe this issue can be solved by transforming the data. 
+
+2) Plot to shows the theoretical quantiles against standardised residuals, by this we can check if the required normal distribution of the data is given. Also here are some issues with this: for low and high theoretical quantiles the distribution does not fit the assumption. 
+
+3) This plot is not needed here, its more an variation of plot 1)
+
+4) This plots indicates, if single values have significant influence on the model fit. If all values are within the cooks distance everything is okay. Here I can't observe any violations of these assumption. 
+
+**Plot relationship between 'attitude' and 'points'**
+
+```{r}
+data %>% ggplot(aes(x = attitude, y = points)) +
+  geom_point() +
+  geom_smooth(method = 'lm')
+```
