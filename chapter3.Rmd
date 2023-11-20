@@ -198,6 +198,3 @@ Task: explore predictive power of the model; 2X2 cross tabulation of predictors 
 
 Unfortunately, I just saw that there is an extra Exercise provided - until now I studied everything by reading books (like the two provided books) and tried to do everything by myself and by reading some blocks. However, in this exercise this has not been possible anymore at the last task because I saw the exercise too late to work on it until the deadline. 
 Nevertheless, I will study this later and will try to solve the task after submitting the assignment. 
-
-```{r}
-```
