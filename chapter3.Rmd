@@ -1,0 +1,203 @@
+# Logistic regression
+
+## This weeks self learning 
+
+This week I studied the recommended chapters from the 'R for Health Data Science' book. Afterwards, I worked on the given tasks and tried to describe everything properly in the Rmd file. 
+
+## Tasks in week 3
+
+**Preparations and data description**
+
+I loaded all necessary packages and save some functions in the global environment to avoid issues with identical named functions. 
+
+```{r}
+library('tidyverse')
+select <- dplyr::select
+rename <- dplyr::rename
+filter <- dplyr::filter
+library('readr')
+library('data.table')
+library('rcompanion')
+library(ggfortify)
+theme_set(theme_test()) # set new 'default' theme for any ggplot 
+```
+
+I load all necessary data for the analysis. The data has been prepared in the first tasks - this is not shown here but rather in the sript in my git repository. In addition, I use the prepared data set from the task to avoid getting troubles from any mistakes in the data preparation.
+Afterwards I explored the data to get an overview. 
+
+```{r}
+# load data
+data <- fread('https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/alc.csv', sep = ',', header = T)
+
+# data exploration
+dim(data)
+names(data)
+str(data)
+```
+The given dataset belongs to a study that was made in Portuguese schools (secondary education). The data includes grades from period 1,2 (G1,G2) and the final grade (G3). Additionally, demographic information as well as information regarding the school and related features were gathered. Each primary table included data from different subjects:  maths (mat) and portuguese language (por). NB: G3 is highly correlated with G1 and G2 due its calculation as final grade from both period 1 and period 2 grades. Its much harder to predict the final grade without information about grades from period 1 and period 2.
+To go more in detail, there are all in all 370 observations (students) with all in all 35 variables available in the given data-set. The names of the variables are visible in the output of names(data), from my point of view there is no need to further describe them except of the following: 
+
+- G1, G2 and G3: grades for certain subjects between 0 and 15, G3 is the final grade that is computed from G1 and G2
+
+- age: students age in years
+
+- absences: number of lessons not present in class 
+
+**Working hypothesis**
+
+Although, the data description available online (link) seems to be more focused more on parameters leading to certain grades in maths and the portuguese language lectures we will investigate the influence between high and low alcohol consumption and some selected variables available in the dataset. I will work on the four variables selected from the dataset. Those are: 
+
+a) **age**: Maybe students with a higher age consume more (or the probability that they consume more is higher) alcohol because they had already more time to get used to alcohol consumption.
+
+b) **absences**: I guess that higher absences could lead to higher alcohol consumption (or a higher probability to do so) due to a lot of freetime and maybe the underlaying problems that makes students missing classes.
+
+c) **activities**: The presence of activities in freetime could lower alcohol consumption (pr a lower probability to consume alcohol). 
+
+d) **sex**: There are a lot of problematic stereotypes in this assumption but nevertheless, I guess for male students it is more likely to consume alcohol and to do so in higher amounts in comparison to female students. 
+
+**Explore chosen variables and their relationships to alcohol consumption**
+
+I explored the chosen variables in the order they are shown above. After computing some simple plots and metrics I described the output. Afterwards, I go on to the next variable. 
+
+a) **age**
+
+```{r}
+data %>% ggplot(aes(x = age, fill = sex)) + 
+  geom_bar()
+
+data %>% ggplot(aes(x = age)) + 
+  geom_bar() + 
+  facet_wrap(~sex)
+
+data %>% ggplot(aes(x = as.factor(age), y = alc_use)) + 
+  geom_boxplot()
+
+data %>% ggplot(aes(x = as.factor(age), y = alc_use)) + 
+  geom_boxplot() + 
+  facet_wrap(~sex)
+
+mean(data$age)
+
+```
+
+The variable age has its mean at 16.58 years. Most students are between 15 and 19 years old, there are some students with the age of 19 and one of 20 and one of 22 years, respectively (both male). The age distribution does not differ significantly between male and female students. The relationship between age and alcohol consumption does not seem to be that straightforward like I thought. With the age of 17 or 18 the mean of alcohol consumption seems to have its peak which is caused mainly by the high alcohol consumption of males in this age class. 
+
+b) **absences**
+
+```{r}
+data %>% ggplot(aes(x = absences)) + 
+  geom_bar()
+
+data %>% ggplot(aes(x = absences, fill = sex)) + 
+  geom_bar() + 
+  facet_grid(~sex)
+
+data %>% ggplot(aes(y = absences, x = factor(alc_use))) + 
+  geom_boxplot()
+
+data %>% ggplot(aes(y = absences, x = factor(alc_use))) + 
+  geom_boxplot() + 
+  facet_grid(~factor(sex))
+
+```
+
+The most abundant category of the variable absence is 0 which means that the student participated in every lecture of the class. The abundance of absences decreases the higher the values of absences get - for both male and female. The relationship between absence and alcohol consumption is not that clear but especially male students show a possible correlation between number of missed lectures and alcohol consumption. For female students this relationship is not that obvious and probably not existing. 
+
+c) **activities**
+
+```{r}
+data %>% ggplot(aes(x = activities)) + 
+  geom_bar()
+
+data %>% ggplot(aes(x = activities, fill = sex)) + 
+  geom_bar() + 
+  facet_wrap(~sex)
+
+data %>% ggplot(aes(x  = alc_use)) +
+  geom_histogram() + 
+  facet_wrap(~activities)
+
+```
+Above all students the activity - variable seems to be even distributed. But splitting up by sex it shows a slightly different picture: male students more often (relative) have activities in their freetime. In contrast to this, female students show exactly the opposite pattern. Nevertheless, these differences seem to be very small and probably not significant. Interesting is the relationship between activites in freetime and alcohol consumption: The most abundant category of alcohol for students having activities in their freetime was 1. Even though this is also the case for people without activities in their freetime this pattern is much less pronounced there. 
+
+d) **sex**
+
+```{r}
+data %>% ggplot(aes(x = sex)) + 
+  geom_bar()
+
+data %>% ggplot(aes(x = activities)) + # I think is not new
+  geom_bar() +
+  facet_wrap(~sex)
+
+data %>% ggplot(aes(x = sex, y = alc_use)) + 
+  geom_boxplot()
+
+```
+
+The dataset contains data from slightly less male than female students. In additon male students seem to have a slightly higher mean alcohol consumption than female students in general. Other plots regarding sex/gender of the students are shown above.
+
+In addition, it is possible to compute some other tables providing an overview through the dataset. 
+
+**Fit logistic regression models**
+
+This seems to be the main part of the task: explore the relationship between alcohol consumption and the chosen variables by fitting logistic regression models. 
+First, I will fit the models (see below for exact fitting strategy) and compare them. Afterwards, I will extract interesting values and interpret the models as well as the values. 
+
+**Fitting strategy**
+
+- parsimony
+- account for variables that have been shown in previous studies to be related to target variable 
+- in health data science: always correct/include demographic parameters and background variables 
+- check individually for interactions and include them if needed
+- final model selection by using AIC (AICc) and maximize c statistics
+
+```{r}
+# fitting model in baseR
+# m1 <- glm(formula = alc_use ~ age, activities + sex + absences, data = data, family = binomial) # ah - I have to chose another alc_use variable, then probably my data exploration is not up to date, hope to have the time to able to update this
+
+m1 <- glm(formula = high_use ~ age + activities + sex + absences, data = data, family = binomial) # with high_use as response variable
+summary(m1)
+
+# fitting everything with finalfit package
+library(finalfit)
+dependent <- "high_use"
+explanatory <- c("age", 'activities', 'sex', 'absences')
+(m2 <- data %>% 
+  finalfit(dependent, explanatory, metrics = TRUE)) # metrics = T to see model metrics
+
+```
+
+The task does not provide information if several different models should be fitted. Thus, I only fitted one global model with all selected variables I selected to explain high alcohol consumption. 
+NB: Some of my variables seem to be seen as factors (sex with levels M and F; activities with levels yes and no). R deals with them  by excluding one class and comparing the other class to this so called 'base line class'. Normally, R orders the classes in an alphabetical order. To check how R actually treats it use options("contrasts"). In this case of my fitted model R activities NO and sex female was used as reference class. Afterwards, a 'test whether the pairwise difference between the coefficient of the reference class and the other class is different from zero or not' is performed. The output from this test are the z and p-values in the model output. If only one category is significant this does not mean that the whole variable should be removed! The overall effect of the variable can be checked by an likelihood ratio test. All in all, the not removed levels in the model summary show the difference to the category that is not shown. The p- value behind indicates, if this difference is significant. 
+
+The model summary provides Estimates (but un-transformed to the natural scale, because of logit link), Standard deviation, z statistics and p-value. Additionally, the null and residual deviance with the degrees of freedom is shown. The AIC of the model is shown at the bottom of the output. The output of the model m1 shows significance for the intercept (p = 0.0179), and a significant (p = 1.16e-05) difference from sex m to base line category sex f. Furthermore, the variable absences seem to be significant too (p = 6.57e-05). All other variables are not significant. 
+
+For further interpretation especially of the OR I have to extract the estimates and transform them. This is done in the following r code chunk: 
+
+```{r}
+# baseR approach
+exp(coefficients(m1)) # exp() to back transform data from logit
+
+# approach from course book 
+coef(m1) %>% exp()
+confint(m1) %>% exp()
+
+# and further values and model characteristics
+library(broom)
+m1 %>% # simply an alternative from code above
+  tidy(conf.int = TRUE, exp = TRUE)
+m1 %>% # extract model metrics
+  glance()
+```
+The rescaled estimates provide information about the odds. To come back to the fitted model: Each unit increase of age seems to increase the odds of high alcohol consumption by 1.15694394 in a positive direction. This would mean, that my guess has been right: higher age makes high alcohol consumption more likely. The sex has also an importance for alcohol consumption: being male increases the odds by 2.97164574 to have a high alcohol consumption. Again, my guess seems to be right. The same to absences: each unit of absence increases the odds by 1.09780607 to have a high alcohol consumption. My guess seem to be right also for this variable. 
+
+**Explore predictive power of my model**
+
+Task: explore predictive power of the model; 2X2 cross tabulation of predictors versus actual values, Compute the total proportion of inaccurately classified individuals (= the training error) and comment on all the results. Compare the performance of the model with performance achieved by some simple guessing strategy. 
+
+Unfortunately, I just saw that there is an extra Exercise provided - until now I studied everything by reading books (like the two provided books) and tried to do everything by myself and by reading some blocks. However, in this exercise this has not been possible anymore at the last task because I saw the exercise too late to work on it until the deadline. 
+Nevertheless, I will study this later and will try to solve the task after submitting the assignment. 
+
+```{r}
+```
