@@ -47,3 +47,7 @@ gii <- gii %>% mutate(Edu2.FM = Edu2.F / Edu2.M,
 human <- inner_join(x = hd, y = gii, by = 'Country') # looks like everything worked
 dim(human)
 head(human)
+
+# export dataset
+write_csv(human, file = 'data/human_dataset.csv')
+
