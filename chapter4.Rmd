@@ -1,0 +1,292 @@
+# 4: Clustering and classification
+
+## This weeks self learning 
+
+This week I red the provided chapters 12, 17 and 18 from Vehkalahti, Kimmo & Everitt, Brian S. (2019). Additionally, I studied some of the topics from textbooks in my mother toung because sometimes I struggeled with understand all the new concepts immeadiately in english. I deepened the learning by doing the Exercise4.Rmd and now feel well prepared for doing the assignment 4. 
+
+## Tasks in week 4
+
+### Preparations and data description**
+
+I loaded all necessary packages and save some functions in the global environment to avoid issues with identical named functions. 
+
+```{r, results = 'hide', warning = FALSE, message = FALSE}
+library('tidyverse')
+select <- dplyr::select
+rename <- dplyr::rename
+filter <- dplyr::filter
+library('MASS')
+library('corrplot')
+library('gridExtra')
+library('factoextra')
+library('cluster')
+theme_set(theme_test()) # set new 'default' theme for any ggplot 
+```
+
+I load all necessary data for the analysis. The data has been prepared in the first tasks - this is not shown here but rather in the sript in my git repository. In addition, I use the prepared data set from the task to avoid getting troubles from any mistakes in the data preparation.
+Afterwards I explored the data to get an overview. 
+
+```{r}
+# load data
+data("Boston")
+
+# data exploration
+dim(Boston)
+names(Boston)
+str(Boston)
+```
+
+The given data set called 'Boston' that is implemented in the R package 'MASS' provides information of 14 different variables on 506 Suburbs of Boston, Massachusetts. The data has been sampled long time ago - the first publication that is available on this data set has been published in 1978. In detail, the provided variables are: 
+
+a) 'crim' - per capita crime rate by town
+b) 'zn' - proportion of residential land zoned for lots over 25,000 sq.ft.
+c) 'indus' - proportion of non-retail business acres per town
+d) 'chas' - Charles River dummy variable (= 1 if tract bounds river; 0 otherwise)
+e) 'nox' - nitrogen oxides concentration (parts per 10 million)
+f) 'rm' - average number of rooms per dwelling
+g) 'age' - proportion of owner-occupied units built prior to 1940
+h) 'dis' - weighted mean of distances to five Boston employment centres
+i) 'rad' - index of accessibility to radial highways
+j) 'tax' - full-value property-tax rate per $10,000
+k) 'ptratio' - pupil-teacher ratio by town
+l) 'black' - 1000(Bk−0.63)21000(Bk−0.63)2 where BkBk is the proportion of blacks by town
+m) 'lstat' - lower status of the population (percent)
+n) 'medv' - median value of owner-occupied homes in $1000s
+
+### Overview on the data 
+
+```{r}
+# compute the general overview on the data
+summary(Boston) # summary statistics of all variables 
+pairs(Boston) # graphical overview but somehow this is very messy, I dont know if this is the right for the task
+
+# compute some histograms to get an idea of the distribution 
+a <- Boston %>% 
+  ggplot(aes(x = crim)) + 
+  geom_histogram() + 
+  ggtitle(label = 'Crime rate per capita')
+b <- Boston %>% 
+  ggplot(aes(x = zn)) + 
+  geom_histogram() + 
+  ggtitle(label = 'Proportion of residential land zoned')
+c <- Boston %>% 
+  ggplot(aes(x = indus)) + 
+  geom_histogram() + 
+  ggtitle(label = 'proportion of non-retail business acres')
+d <- Boston %>% 
+  ggplot(aes(x = chas)) + 
+  geom_bar() + 
+  ggtitle(label = 'Charles River dummy variable')
+e <- Boston %>% 
+  ggplot(aes(x = nox)) + 
+  geom_histogram() + 
+  ggtitle(label = 'nitrogen oxides concentration')
+f <- Boston %>% 
+  ggplot(aes(x = rm)) + 
+  geom_histogram() + 
+  ggtitle(label = 'average number of rooms per dwelling')
+g <- Boston %>% 
+  ggplot(aes(x = age)) + 
+  geom_histogram() + 
+  ggtitle(label = 'proportion of owner-occupied units')
+h <- Boston %>% 
+  ggplot(aes(x = dis)) + 
+  geom_histogram() + 
+  ggtitle(label = 'weighted mean of distances')
+i <- Boston %>% 
+  ggplot(aes(x = rad)) + 
+  geom_histogram() + 
+  ggtitle(label = 'accessibility to radial highways')
+j <- Boston %>% 
+  ggplot(aes(x = tax)) + 
+  geom_histogram() + 
+  ggtitle(label = 'full-value property-tax rate per $10,000')
+k <- Boston %>% 
+  ggplot(aes(x = ptratio)) + 
+  geom_histogram() + 
+  ggtitle(label = 'pupil-teacher ratio by town')
+l <- Boston %>% 
+  ggplot(aes(x = black)) + 
+  geom_histogram() + 
+  ggtitle(label = 'proportion of blacks by town')
+m <- Boston %>% 
+  ggplot(aes(x = lstat)) + 
+  geom_histogram() + 
+  ggtitle(label = 'lower status of the population (percent)')
+n <- Boston %>% 
+  ggplot(aes(x = medv)) + 
+  geom_histogram() + 
+  ggtitle(label = 'median value of owner-occupied homes in $1000s')
+
+# combine the plots above to some smaller plots
+grid.arrange(a,b,c,d,e,f)
+grid.arrange(g,h,i,j,k,l)
+grid.arrange(m,n)
+
+# compute correlation plots with corrplot()-function
+cor_matrix <- cor(Boston)
+cor_matrix_r <- round(cor_matrix, digits = 2)
+ # print(cor_matrix) # this does not really makes it more structured and better to get an overwiew with prettier correlation matrix
+corrplot(cor_matrix_r, title = 'Boston correlation matrix rounded', 
+         cl.pos = "b", tl.pos = "d", tl.cex = 0.6)
+```
+
+Phuu, its a lot to describe all the relation between the variables and comment on their distribution. But lets have a try - I hope I don't forget that much: 
+
+**The distribution of the variables:**
+
+a) 'crim' - the mean of this variables is 3.6 and the value of the median in not much higher too; maximum is much higher at ~89
+b) 'zn' - I can't see any special distribution, but the median is 0 and the mean is around 11 
+c) 'indus' - again no special distribution, but the values range from 0 to a max of 27.74 with a very common value of ~19, the mean is 11.14
+d) 'chas' - values either 0 or 1, but 0 is much more frequent, more than 400 times
+e) 'nox' - I detected no special distrubution for the values between 0 and 1, the mean is 0.55
+f) 'rm' - looks like a normal or t distribution with a mean of 6.285
+g) 'age' - values between 0 and 100, mean is 68
+h) 'dis' - mean of 3.7, looks a little bit like a poisson distribution with most frequent value of around 2
+i) 'rad' - min of 1 and max of 24, I cant see any distribution pattern, the most frequent value is 24!
+j) 'tax' - min of 187 and max of 711 with again no visible pattern in the distribution
+k) 'ptratio' - values between 12.6 and 22, the most frequent value seems to be slightly above 20, the mean is18.46
+l) 'black' - the distribution seems to be exponential with a max of 396
+m) 'lstat' - looks like a poisson distribution with the most frequent value around ~8 and a mean of 12.65
+n) 'medv' - I cant observe any pattern, the min is 5, the max is 50 and the mean 22.53 - well one could assume a normal distribution, but I not really agree to this!
+
+**Correlation between the variables**
+
+To shorten this a little bit I will only write about the positive or negative correlations that are visible from the correlation plot: 
+
+- strong negative correlation: dis~age; dis~nox; dis~indus; lstat~medv, lstat~rm ...
+
+- strong positive correlation: rad~tax; indus~tax, indux~nox, age~nox ... 
+
+### Some preparation in the dataset (scaling, new variable etc)
+
+The data set should be standardized and some other computation and data wrangling tasks should be done: 
+
+```{r}
+
+# scale dataset and print summary statistics
+boston_scaled <- Boston %>% scale()
+summary(boston_scaled)
+
+# create a categorial variable
+boston_scaled <- boston_scaled %>% 
+  as.data.frame() %>% 
+  mutate(crim = as.numeric(crim)) #change class to numeric
+bins <- quantile(boston_scaled$crim) # get bins from quantiles of the scaled variable
+crime <- cut(boston_scaled$crim, breaks = bins, include.lowest = TRUE, 
+             labels = c("low", "med_low", "med_high", "high")) # create categorial variable
+boston_scaled <- boston_scaled %>% mutate(crim = crime) # update old crime variable in dataset
+
+# devide dataset in train and test dataset 
+set.seed(2)
+ind <- sample(nrow(boston_scaled),  size = nrow(boston_scaled) * 0.8) # choose randomly 80% of the rows
+train <- boston_scaled[ind, ] # create train set by selecting for the randomly chosen row numbers
+test <- boston_scaled[-ind,] # create test set by selecting for all other rows
+correct_classes_test <- test$crim # save the correct classes from test data
+test <- select(test, -crim) # remove the crime variable from test data
+
+```
+
+The data is scaled now - the mean is by definition 0 and sd should be 1. So the values of each variable range now around of 0 in both positive and negative direction. Additionally, extremely high or low values / outliner are now closer to the other values by scaling. 
+
+### Fit linear discriminant analysis
+
+```{r}
+# fit lda
+lda.fit <- lda(crim ~ ., data = train) # fit lda, crime as target variable, all others as predictors
+lda.fit # print output 
+
+# the function for lda biplot arrows - I changed nothing from the exercise
+lda.arrows <- function(x, myscale = 1, arrow_heads = 0.1, color = "red", tex = 0.75, choices = c(1,2)){
+  heads <- coef(x)
+  graphics::arrows(x0 = 0, y0 = 0, 
+         x1 = myscale * heads[,choices[1]], 
+         y1 = myscale * heads[,choices[2]], col=color, length = arrow_heads)
+  text(myscale * heads[,choices], labels = row.names(heads), 
+       cex = tex, col=color, pos=3)}
+
+classes <- as.numeric(train$crim) # save crime classes as numeric, hm - something went wrong
+
+# plot lda result together with arrows, this wont work in the knitted document!
+plot(lda.fit, dimen = 2, col = classes) # dimen sets the number of discriminants
+# lda.arrows(lda.fit, myscale = 2)
+```
+
+Its not needed to comment on the output - but this looks not that trustworthy to me at all! Why do there is exactly this result und why are the classes that randomly distributed in various groups?
+
+### predict values from LDA
+
+Firstly, I will do some preparations to afterwards predict classes with the LDA data on the test dataset and compare the results: 
+
+```{r}
+
+summary(correct_classes_test) # I saved the categories already some time earlier
+names(test) # the crime variable has already been removed in a rchunk above
+
+lda.pred <- predict(lda.fit, newdata = test) # predict with new data from the test set
+table(correct = correct_classes_test, predicted = lda.pred$class) # provide cross tabulation
+
+```
+
+The cross tabulation shows the performance of the lda to predict the classes in the test dataset. From my point of view, this looks very good - especially for high with only one wrong predicted class. Medium low and medium high performed intermediately, there were some issues and the prediction was not that precise. The predictions for low was the worst: only 15 times the prediction has been correct and 14 times wrong. This result is not that trustworthy!
+NB: I had no clue how to comment on this results in a scientific way or a more precise way than writing how I personally would judge them. Are there any metrics and rules of thumb (like AIC(c) or BIC) to have an idea what is 'good' or not?
+
+### calculate distances and k-mean algorithm 
+
+```{r}
+# preparation
+data(Boston) # load dataset
+Boston <- scale(Boston) # scale dataset
+
+# calculate distances
+dist_eu <- dist(Boston, method = 'euclidean') # calculate euclidean distance
+dist_man <- dist(Boston, method = 'manhattan') # calculate manhattan distance
+# there are several other methods that can be used!  - ?dist
+
+# find proper number of classes for kmeans approach
+fviz_nbclust(Boston, FUNcluster = kmeans, method = "wss") # kmeans is a function:D
+
+# k-means algorithm 
+km2 <- kmeans(Boston, centers = 2) # 2 classes could be okay, they have to be set proir
+km3 <- kmeans(Boston, centers = 3)
+km4 <- kmeans(Boston, centers = 4)
+km5 <- kmeans(Boston, centers = 5)
+
+# plot results
+pairs(Boston, col = km3$cluster) # phuuu, that looks overwhelming
+# plot results more in detail
+pairs(Boston[,1:5], col = km3$cluster)
+pairs(Boston[,6:10], col = km3$cluster)
+pairs(Boston[,11:14], col = km3$cluster)
+
+# a more advanced plot
+p_2 <- fviz_cluster(km2, data = Boston,
+             palette = c("red", "brown"), 
+             geom = "point",
+             ellipse.type = "convex", 
+             ggtheme = theme_bw())
+p_3 <- fviz_cluster(km3, data = Boston,
+             palette = c('purple', 'yellow', 'grey'), 
+             geom = "point",
+             ellipse.type = "convex", 
+             ggtheme = theme_bw())
+p_4 <- fviz_cluster(km4, data = Boston,
+             palette = c("#2E9FDF", "#00AFBB", "#E7B800", 'green'), 
+             geom = "point",
+             ellipse.type = "convex", 
+             ggtheme = theme_bw())
+p_5 <- fviz_cluster(km5, data = Boston,
+             palette = c("lightgreen", "darkblue", "darkred", 'orange', 'lightblue'), 
+             geom = "point",
+             ellipse.type = "convex", 
+             ggtheme = theme_bw())
+grid.arrange(grobs = list(p_2,p_3, p_4, p_5), nrow = 2)
+```
+
+With the k-means method you have to decide on the number of classes before running the algorithm. Therefor I used the elbow method - it is recommended to set the classes where the total within sum of sqaures does not decrease that much anymore. This point normally is called 'elbow'. In this example there is not really an elbow - but maybe at 2, 3 or 4 (5) classes. Firstly, I tried 4, but after plotting 3 looked much better, so I chose this. To be sure I also plotted 2 and 5.
+To interpret the result: This is very hard for me, but I have a try: The output takes k-means results and the original data as arguments. It shows that somehow the 3 classes that have been build up are distinct even though there is overlap with group 1! Especially, between class 1 and 2 the boarder seems to be a bit random. The plot with 2 clusters much better - there is no overlap at all! The plots of 4 and 5 groups look a bit messy. All in all, I think it is reasonable to stay with 2 categories that have been built up with the k-means approach. 
+NB: Somehow I had troubles with the plot of the 3 categories - the groups were built up slightly different each time I run the plot. Do you have an idea what causes this issues and how to solve this (statistically or in coding)?
+
+### Bonus
+
+(until now I don't worked further, if I have time, I will go on)
