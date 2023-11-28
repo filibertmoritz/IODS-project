@@ -289,4 +289,21 @@ NB: Somehow I had troubles with the plot of the 3 categories - the groups were b
 
 ### Bonus
 
-(until now I don't worked further, if I have time, I will go on)
+```{r}
+set.seed(2)
+data(Boston) # reload dataset
+Boston <- Boston %>% scale() # standardize dataset
+km3 <- kmeans(Boston, centers = 3) # calculate kmeans 
+lda.fit2 <- lda(x = Boston, grouping = km3$cluster) # perform discriminant analysis on scaled Boston data providing the groups
+plot(lda.fit2, dimen = 2, col = km3$cluster) # plot in biplot
+lda.arrows(lda.fit2, myscale = 3) # add arrows
+
+```
+
+Like to be seen in the biplot above the data has been clustered mainly in three clusters like set in the kmeans algorithm. There is one relatively distinct 'green' class with the number three but unfortunately there is some overlap to the cluster of number one. The clusters of number one and number two seem to be closer together even though there is nearly no overlap between them.
+The arrows represent the influence of single variables on the clustering - there does not seem to be the one most influential variable. But for example 'age', 'zn' seem to distinguish class 1 and 2. Additionally to those two there are plenty of variables leasing to the distinct cluster of 3: mainly 'rad', 'tax' and 'nox' cause the separation of class 3. 
+
+Somehow there are issues while knitting the document - afterwards the biplot looks different again:( - I correct it here, hopefully everything will run properly with the next trail of knitting: 
+
+Like to be seen in the biplot above the data has been clustered mainly in three clusters like set in the kmeans algorithm. All three classes are relatively distinct, - there is only some overlap between one and two. Additionally, the clusters one and three are not that close together like two.
+The arrows represent the influence of single variables on the clustering - there does not seem to be the one most influential variable. But for example 'age', 'zn' seem to distinguish class 1 and 3. Additionally to those two there are plenty of variables leasing to the distinct cluster of 2: mainly 'tax', 'nox' in one direction and 'indus' and 'rad' in a slightly different direction cause the separation of class two. 
