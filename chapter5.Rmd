@@ -1,0 +1,181 @@
+# 5: Dimensionality reduction techniques
+
+## This weeks self learning 
+
+This week I red the provided chapter 13 from Vehkalahti, Kimmo & Everitt, Brian S. (2019). Additionally, I studied some of the topics from textbooks in my mother thoung because sometimes I struggled with understanding all the new concepts in English. I deepened the learning by doing the Exercise5.Rmd and now feel more or less prepared for doing the assignment 4. 
+
+## Tasks in week 5
+
+### Some preparation
+
+I loaded all necessary packages and save some functions in the global environment to avoid issues with identical named functions. Additionally, load the dataset provided in the tasks - to avoid complications with possibly wrong data wrangling task!
+
+```{r, results = 'hide', warning = FALSE, message = FALSE}
+
+# load packages and save some relevant functions
+library('tidyverse')
+select <- dplyr::select
+rename <- dplyr::rename
+filter <- dplyr::filter
+library('MASS')
+library('corrplot')
+library('gridExtra')
+library('factoextra')
+library('cluster')
+library('tibble')
+library('GGally')
+library('FactoMineR')
+
+# set global theme for ggplot
+theme_set(theme_test()) # set new 'default' theme for any ggplot 
+
+# load data 
+human <- read_csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/human2.csv")
+
+```
+
+I load all necessary data for the analysis. The data has been prepared in the data preparation tasks - this is not shown here but rather in the script in my git repository. However, I use the prepared data set from the task to avoid getting troubles from any mistakes in the data preparation.
+
+### Show graphical overview
+
+Afterwards, I changed the column 'Country' to row names and explored the data and variables. 
+
+```{r}
+
+# move country names to row names
+human <- column_to_rownames(human, "Country")
+
+# data exploration 'human'
+dim(human) # 155 observations and 8 variables for each country
+names(human) # these are the variables
+str(human) # access the structure of the data
+summary(human) # print summary statistics for all variables 
+human %>% ggpairs(title = 'Human data set', progress = F)
+human %>% cor() %>% # provide correlation plot for all variables
+  round(digits = 2) %>% 
+  corrplot(cl.pos = "b", tl.pos = "d", tl.cex = 0.6)
+
+```
+
+The given data set called 'human' that is implemented in the R package 'MASS' provides information of 8 different variables on 155 different countries of the world. The data is provided by the United Nations Development Program. In detail, the available variables contain information about the following 'stuff' (Additionally, I commented on the distribution of the variables): 
+
+a) 'Edu2.FM' - Proportion of females with at least secondary education / Proportion of males with at least secondary education; distribution: no certain distribution, but mean of 0.8529
+b) 'Labo.FM' - Proportion of females in the labour force / Proportion of males in the labour force; distribution: no certain distribution, but mean of 0.7074 and the most values range around 0.8
+c) 'Life.Exp' - Life expectancy at birth; distribution: no certain distribution, but mean of 71.65 years and there is a min of 49 year and a max of ~83 years
+d) 'Edu.Exp' - Expected years of schooling; distribution: no certain distribution, but there is a mean of 13.18 years and a min of 5.4 years and a max of 20.2 years - the distribution seems to be 'centered'
+e) 'GNI' - Gross National Income per capita; low values are most abundant! the min is 581 and the max is 123124, the mean is relatively low with 17628 - this distribution of income is crazy!
+f) 'Mat.Mor' - Maternal mortality ratio; low values again very abundant, the min value is 1, the max very high with 1100, the mean is around ~150
+g) 'Ado.Birth' - Adolescent birth rate, again no certain distribution but low values are more abundant, min of 0.6, mean of 47.16 and max of 204.8
+h) 'Parli.F'- Percentage of female representatives in parliament; no certain distribution, the lowest percentage of women in parliament is 0 :(, the mean is around one fifth of women in parliament and the maximum is more than the half!
+
+The correlation between the variables I briefly name here: 
+
+- stronger positive correlation between: Mat.Mor~Ado.Birth, Life.Exp~Edu.Exp, GNI~Life.Exp, GNI~Edu.Exp, Edu2.FM~Life.Exp, Edu2.FM~Edu.Exp
+
+- stronger negative correlation between: Mat.Mor~Life.Exp, Mat.Mor~Edu.Exp, Mat.Mor~GNI, Ado.Birth~Life.Exp, Ado.Birth~Edu.Exp, Ado.Birth~GNI, Edu2.FM~Ado.Birth, Edu2.FM~Mat.Mor
+
+All in all, this means that especially Mat.Mor and Ado.Birth are strongly positively correlated and Life.Exp with Edu.Exp as well as GNI with those two. Especially, the negative correlations are a result from those. Its interesting, that Labo.FM and Parli.F show no (strong) correlations at all. 
+
+### Principal component analysis (PCA) - unscaled and scaled data
+
+**unscaled data**
+
+```{r warning=F}
+
+# pca on unscaled (!) dataset 'human'
+pca <- prcomp(human)
+(s <- summary(pca)) # save and print summary of pca
+
+# compute percentages of variance for variability
+pca_pr <- round(100*s$importance[2, ], digits = 2) # compute percentages with 100 or proportions by with 1
+pca_pr
+plot(pca_pr, type = 'b', xlab = 'Number of components', ylab = 'Percentages of viriability')
+
+# create object pc_lab to be used as axis labels
+pc_lab <- paste0(names(pca_pr), " (", pca_pr, "%)")
+
+# draw a biplot
+biplot(pca, cex = c(0.8, 1), col = c("grey40", "deeppink2"), xlab = pc_lab[1], ylab = pc_lab[2])
+
+```
+
+**scaled data**
+
+```{r}
+# pca on scaled dataset 'human'
+pca_s <- human %>% scale %>% 
+  prcomp()
+(s_s <- summary(pca_s)) # save and print summary of pca
+
+# compute percentages of variance for variability
+pca_s_pr <- round(100*s_s$importance[2, ], digits = 2) # compute percentages with 100 or proportions by with 1
+pca_s_pr
+plot(pca_s_pr, type = 'b', xlab = 'Number of components', ylab = 'Percentages of viriability')
+
+# create object pc_lab to be used as axis labels
+pc_s_lab <- paste0(names(pca_s_pr), " (", pca_s_pr, "%)")
+
+# draw a biplot
+biplot(pca_s, cex = c(0.8, 1), col = c("grey40", "deeppink2"), xlab = pc_s_lab[1], ylab = pc_s_lab[2])
+
+```
+**Interpretation**
+
+The two Principal Component Analyses are very different to each other! For the unscaled data the principal component analysis recommends 2 components that should be applied (visible in the plot with percentages that these components provide to split up the data against the components from the 'elbow'). The arrow of GII shows the standard deviation of 'GII' which causes additional issues. Because of the unscaled data the GII variable seems to dominate the whole analysis because of the very high values in this variable. Nearly only this variable seems to cause the splitting in different components - 99.9 percent! All other variables seem to be summarized in component 2 but not really have an influence. In comparison to this, the scaled data avoids this issues by scaling all variables and making these variables a kind of 'compareable'. Again, two components seem to provide a reasonable number of components (see the location of the 'elbow'). The biplot shows which components consist of which variables: The strong positive and negative correlated variables are summarizes in component 1 - positive correlated are: Mat.Mor~Ado.Birth in one direction and  Life.Exp~Edu.Exp, GNI~Life.Exp, GNI~Edu.Exp, Edu2.FM~Life.Exp, Edu2.FM~Edu.Exp in the other direction - these two groups are each not positively correlated visible from the angle between them. Only Parli.F and Labo.FM show in another direction and are also correlated (visible from the angle between them) building up component 2. 
+Component 1 is responsible for 53 % of variance and Component 2 for 16 percent. 
+
+One assumption of PCA is that the components are orthogonal to the axes - this seems to be nearly given. Otherwise, ICA could be used. 
+
+I'm not sure what is the point of the task 'Include captions (brief descriptions) in your plots where you describe the results by using not just your variable names'. Here, I briefly describe the meaning of the analysis and try to implement this in the plot: 
+
+- Component 1 seems to sum up all the variables describing economic status and wealth - which in consequnce could be summarizes by standard of living and wealth. 
+- Component 2 seems to group variables dealing with gender equality and women rights!
+
+```{r}
+# improve plot
+biplot(pca_s, cex = c(0.8, 1), col = c("grey40", "deeppink2"), 
+       xlab = paste0('Living standard/Wealth component - ', pc_s_lab[1]), 
+       ylab = paste0('Gender equality component - ',pc_s_lab[2]), 
+       main = 'Principle Components')
+```
+
+### Multiple Correspondence Analysis with the tea dataset
+
+First load the data and convert all stringsToFactors = T. Afterwards, explore and visualize the dataset briefly to then perform MCA
+
+```{r}
+
+# load data
+tea <- read.csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open-Data-Science/master/datasets/tea.csv", stringsAsFactors = TRUE)
+
+# explore data 
+dim(tea) # 300 observations and 36 variables 
+str(tea) # all variables are factors (2-6 levels), except age: integer
+summary(tea) # hui, thats a lot!
+View(tea) # show table in extra window to visualize data
+
+# perform MCA on all variables except from age
+mca_full <- MCA(tea %>% select(-age), graph = FALSE) # 'age' causes error, I excluded this variable from analysis
+summary(mca_full)
+
+# draw plot
+plot(mca_full, invisible=c('ind'), graph.type = "classic", habillage = "quali")
+plot(mca_full, invisible=c('var'), graph.type = "classic", habillage = "quali")
+
+# select some variables from data set
+tea_sel <- tea %>% select(evening, always, friends, How, sex, spirituality, exciting, home)
+
+# perform MCA on selection of variables like in Exercise
+mca_sel <- MCA(tea_sel, graph = FALSE) # 'age' causes error, I excluded this variable from analysis
+summary(mca_sel)
+
+# draw plot
+plot(mca_sel, invisible=c('ind'), graph.type = "classic", habillage = "quali")
+plot(mca_sel, invisible=c('var'), graph.type = "classic", habillage = "quali")
+
+# other possebilities for visualization - add code
+
+```
+
+Add interpretation: 
+
