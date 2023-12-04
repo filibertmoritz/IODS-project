@@ -89,7 +89,7 @@ pca <- prcomp(human)
 # compute percentages of variance for variability
 pca_pr <- round(100*s$importance[2, ], digits = 2) # compute percentages with 100 or proportions by with 1
 pca_pr
-plot(pca_pr, type = 'b', xlab = 'Number of components', ylab = 'Percentages of viriability')
+plot(pca_pr, type = 'b', xlab = 'Number of components', ylab = 'Percentages of variability')
 
 # create object pc_lab to be used as axis labels
 pc_lab <- paste0(names(pca_pr), " (", pca_pr, "%)")
@@ -121,14 +121,15 @@ biplot(pca_s, cex = c(0.8, 1), col = c("grey40", "deeppink2"), xlab = pc_s_lab[1
 ```
 **Interpretation**
 
-The two Principal Component Analyses are very different to each other! For the unscaled data the principal component analysis recommends 2 components that should be applied (visible in the plot with percentages that these components provide to split up the data against the components from the 'elbow'). The arrow of GII shows the standard deviation of 'GII' which causes additional issues. Because of the unscaled data the GII variable seems to dominate the whole analysis because of the very high values in this variable. Nearly only this variable seems to cause the splitting in different components - 99.9 percent! All other variables seem to be summarized in component 2 but not really have an influence. In comparison to this, the scaled data avoids this issues by scaling all variables and making these variables a kind of 'compareable'. Again, two components seem to provide a reasonable number of components (see the location of the 'elbow'). The biplot shows which components consist of which variables: The strong positive and negative correlated variables are summarizes in component 1 - positive correlated are: Mat.Mor~Ado.Birth in one direction and  Life.Exp~Edu.Exp, GNI~Life.Exp, GNI~Edu.Exp, Edu2.FM~Life.Exp, Edu2.FM~Edu.Exp in the other direction - these two groups are each not positively correlated visible from the angle between them. Only Parli.F and Labo.FM show in another direction and are also correlated (visible from the angle between them) building up component 2. 
-Component 1 is responsible for 53 % of variance and Component 2 for 16 percent. 
+The two Principal Component Analyses are very different to each other! For the unscaled data the principal component analysis simply orders the components in the way of the highest variance. Considering this, principal component 1 seems to have much higher variability in the data than all the other variables. Thus, its the main/first principal component that is used to split up the data and seems to dominate all others. All other variables are summarized in the second component but do not account for substantial separation of the data at all. This issue comes from the fact that the variables are all measured in different units and are not comparable between each other. The arrow of GII shows the standard deviation of 'GII' which is much higher than at all other variables and also has to do with the high variance. 
+In comparison to this, the scaled data avoids this issues by scaling all variables and making these variables a kind of 'comparable'. Two components seem to provide a reasonable number of components (see the location of the 'elbow'). The biplot shows which components consist of which variables: The strong positive and negative correlated variables are summarizes in component 1 - positive correlated are: Mat.Mor~Ado.Birth in one direction and  Life.Exp~Edu.Exp, GNI~Life.Exp, GNI~Edu.Exp, Edu2.FM~Life.Exp, Edu2.FM~Edu.Exp in the other direction - these two groups are each not positively correlated visible from the angle between them. Only Parli.F and Labo.FM show in another direction and are also correlated (visible from the angle between them) building up component 2. 
+Component 1 is responsible for 53 % of variance and Component 2 for 16 %. 
 
 One assumption of PCA is that the components are orthogonal to the axes - this seems to be nearly given. Otherwise, ICA could be used. 
 
 I'm not sure what is the point of the task 'Include captions (brief descriptions) in your plots where you describe the results by using not just your variable names'. Here, I briefly describe the meaning of the analysis and try to implement this in the plot: 
 
-- Component 1 seems to sum up all the variables describing economic status and wealth - which in consequnce could be summarizes by standard of living and wealth. 
+- Component 1 seems to sum up all the variables describing economic status and wealth - which in consequence could be summarizes by standard of living and wealth. 
 - Component 2 seems to group variables dealing with gender equality and women rights!
 
 ```{r}
@@ -138,6 +139,11 @@ biplot(pca_s, cex = c(0.8, 1), col = c("grey40", "deeppink2"),
        ylab = paste0('Gender equality component - ',pc_s_lab[2]), 
        main = 'Principle Components')
 ```
+
+The next tasks asks for a personal interpretation on the first two principal components. I will try to provide this personal point of view below - even though I already tried to implement this in the previous task. 
+The first principal component consists of variables like Edu.Exp, Edu2.FM, GNI, Ado.Birth and Mat.Mor. I think they are all somehow related to the level of wealth of the country and are used to calculate the HDI. From my understanding, this is a highly weak understanding of 'development' if there should be a discussion of 'development' at all. This concept currently is under debate - I'm not that much into this topic. However, there is one variable that does not fit that good in the interpretation: Edu2.FM. 
+The other component seems to be more about equality with the variables of Parli.F and Labo.FM which built up the second component. My interpretation of this is that a high level of wealth does not always mean gender and social equality which is so sad. This makes me questioning the current understanding of economic 'development' to improve women rights for example. 
+
 
 ### Multiple Correspondence Analysis with the tea dataset
 
@@ -152,7 +158,7 @@ tea <- read.csv("https://raw.githubusercontent.com/KimmoVehkalahti/Helsinki-Open
 dim(tea) # 300 observations and 36 variables 
 str(tea) # all variables are factors (2-6 levels), except age: integer
 summary(tea) # hui, thats a lot!
-View(tea) # show table in extra window to visualize data
+#View(tea) # show table in extra window to visualize data
 
 # perform MCA on all variables except from age
 mca_full <- MCA(tea %>% select(-age), graph = FALSE) # 'age' causes error, I excluded this variable from analysis
@@ -171,11 +177,14 @@ summary(mca_sel)
 
 # draw plot
 plot(mca_sel, invisible=c('ind'), graph.type = "classic", habillage = "quali")
-plot(mca_sel, invisible=c('var'), graph.type = "classic", habillage = "quali")
+#plot(mca_sel, invisible=c('var'), graph.type = "classic", habillage = "quali")
 
 # other possebilities for visualization - add code
 
 ```
+I will focus on the analysis of the tea subset because the tea full dataset MCA biplot looks a bit messy and overwhelming to me. This is the last shown plot: 
+All in all, only about 25 % of the total inertia is explained. The first dimension seems to account for ~13 % and the second for 12 % of the inertia. Thus, the adequacy of the fit should be addressed in more detail and maybe more dimensions should be analysed. 
+More in detail, the categories of different columns/variables that are placed next to each other somehow seem to be related to each other - they 'share a pattern' in their factors. Its not easy to interpret this in the current example. Even though, I will have a try: for example 'lemon' tea, I certain amount of 'spirituality' and exciting seems to be a kind of associated to each other and this is then done regularly 'always'. Additionally, drinking tea in the 'evening' together with 'friends' seems to be a common thing. Furthermore, all the 'not' variables are sharing a pattern (or the pattern are not that different): Drinking tea without friends, not in the evening only rarely and without any kind of spirituality is placed next to each other. 'Other' ways of drinking tea in terms of the added spices or milk etc. is somehow not associated with any other variable patter as well as drinking tea not at home. 
 
-Add interpretation: 
+My interpretation was mainly based on this notes from the book Vehkalahti, Kimmo & Everitt, Brian S. (2019). 'Accordingly, column points that are close together indicate columns with similar profiles down the rows. Finally, row points that lie close to column points represent a row/column combination that occurs more frequently in the table than would be expected if the row and column variables were independent. Conversely, row and column points that are distant from one another indicate a cell in the table where the count is lower than would be expected under independence.'
 
