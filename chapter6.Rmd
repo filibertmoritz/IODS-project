@@ -1,0 +1,213 @@
+# 6: Analysis of longitudinal data
+
+## This weeks self learning 
+
+This week I red the provided chapter 8 and 9 from Vehkalahti, Kimmo & Everitt, Brian S. (2019). Additionally, I studied some of the topics from textbooks in my mother lamguage because sometimes I struggled with understanding all the new concepts in English. I deepened the learning by doing the Exercise6.Rmd and now feel more or less prepared for doing the assignment 6. 
+
+## Some preparation
+
+I loaded all necessary packages and save some functions in the global environment to avoid issues with identical named functions. Additionally, load the data sets I already prepared in the data wrangling tasks. NB: I had to factorize some variables again. 
+
+```{r, results = 'hide', warning = FALSE, message = FALSE}
+
+# load packages and save some relevant functions
+library('tidyverse')
+select <- dplyr::select
+rename <- dplyr::rename
+filter <- dplyr::filter
+library('MASS')
+library('corrplot')
+library('gridExtra')
+library('factoextra')
+library('cluster')
+library('tibble')
+library('GGally')
+library('FactoMineR')
+library(plotrix)
+library(lme4)
+
+# set global theme for ggplot
+theme_set(theme_test()) # set new 'default' theme for any ggplot 
+
+# load data 
+RATSL <- read.csv(file = 'C:/Users/filib/Documents/Studium/Semester 7 (Erasmus)/Introduction to Open Data Science/IODS-project/data/ratsl_data.csv')
+BPRSL <- read.csv(file = 'C:/Users/filib/Documents/Studium/Semester 7 (Erasmus)/Introduction to Open Data Science/IODS-project/data/bprsl_data.csv')
+
+# factorise data and remove X column
+RATSL <- RATSL %>% 
+  mutate(ID = as.factor(ID), Group = as.factor(Group)) %>%
+  select(-X)
+BPRSL <- BPRSL %>% 
+  mutate(treatment = as.factor(treatment), subject = as.factor(subject)) %>%
+  select(-X)
+  
+```
+
+## Work on chapter 8 and the Meet and Repeat 1 but with a different dataset: RATSL
+
+### Data exploration and graphical display of longitudinal data
+
+```{r}
+# some general data exploration like in data wrangling task
+head(RATSL)
+str(RATSL)
+summary(RATSL)
+
+# show graphical overview by plots 
+RATSL %>% ggplot(aes(x = Time, y = Weight, group = ID)) +
+  geom_line() + 
+  facet_wrap(~Group)
+
+# standardize data 
+RATSL <- RATSL %>%
+  group_by(Time) %>%
+  mutate(Weight_std = scale(Weight)) %>% # is the same like scale()
+  ungroup()
+
+# show graphical overview for standardized data 
+RATSL %>% ggplot(aes(x = Time, y = Weight_std, group = ID)) +
+  geom_line() + 
+  facet_wrap(~Group)
+
+```
+
+I plotted a graphical overview on the data - one time with the actual values and one other graph with the standardized data within each 'time'. The plots with standardized weights show highly different thing: The weight seems to stay more or less constand in Group 1, seems to increase on a high level in Group 2 and seems to decrease in Group 3. In comparison, the unstandardized data shows increasing weights over all Groups. 
+
+### Summary statistics
+
+```{r warning=F}
+
+# compute summaries
+RATSLS <- RATSL %>%
+  group_by(Group, Time) %>%
+  summarise(mean = mean(Weight), se = std.error(Weight)) %>%
+  ungroup()
+
+# plot
+# ggplot() +
+#  geom_line(data = RATSL, mapping = aes(x = Time, y = Weight, group = ID)) + 
+#  geom_errorbar(data = RATSLS, mapping = aes(ymin=mean-se, ymax=mean+se, linetype="1"), width=0.3) +
+#  facet_wrap(~Group)
+
+```
+
+Somehow there are issues in plotting the errorbars in ggplot - I'm not really able to fix this issue:/
+
+### Search for outliers in the data by applying boxplots
+
+```{r}
+# draw boxplots for each Group
+RATSL %>% ggplot(aes(y = Weight, group = Group)) + 
+  geom_boxplot() 
+
+# draw boxplots for each Time
+RATSL %>% ggplot(aes(y = Weight, group = Time)) + 
+  geom_boxplot()
+
+# draw boxplots for each Time and Group
+RATSL %>% ggplot(aes(y = Weight, group = Time)) + 
+  geom_boxplot() + 
+  facet_wrap(~Group)
+
+```
+
+It has been hard for me to search for outliers - especially, because from my understanding its not really justified to simply exclude outliers without having a sufficient explanation/reason to do this. If the data is not good enough, statistics shouldn't be used to make the data prettier. 
+However, in the first plots are outliers visible from the points in each group. In plot two do not appear any outlier and in plot 3 are again outliers visible. Only the last plots provides an idea, that maybe measurements for some individuals (ID) seem to be baised by any errors and possibly they could be excluded. Nevertheless, I wont do this here due to a lack of information about possible errors and thus not enough justification for removing data. 
+
+### T-test and Anova
+
+```{r}
+# t-test 
+# t.test(mean ~ Group, data = RATSLS)
+
+# fit lm 
+fit <- lm(Weight ~ Group + Time, data = RATSL)
+summary(fit)
+
+# compute table of variance
+anova(fit)
+```
+
+Firstly, it seems to be not possible to perform a t-test on the data because there are more than 2 groups. Thus, I directly moved forward applying the lm and ANOVA. 
+The linear model showed that both treatments in group 2 and 3 had a significant positive influence on the weight (p-value much below 0.05). Furthermore, the Time had a significant positive impact too.
+
+## Work on chapter 9 and the Meet and Repeat 2 but with a different dataset: BPRS
+
+### plots 
+
+```{r}
+# plot ignoring the longitudinal structure
+ggplot(BPRSL, aes(x = week, y = bprs, linetype = subject)) +
+  geom_line() 
+
+# another plot ignoring the longitudinal structure
+ggplot(BPRSL, aes(x = week, y = bprs, linetype = treatment)) +
+  geom_line()
+
+
+# plot 
+ggplot(BPRSL, aes(x = week, y = bprs, linetype = subject)) +
+  geom_line() + 
+  facet_wrap(~treatment)
+
+```
+
+I built some line plots with the first trying to ignore the longitudinal structure - this not really is useful. Afterwards, I splitted the data by treatment and some good plots appear. 
+
+### Linear model
+
+```{r}
+
+# fit linear model ignoring the longitudinal structure
+BPRSL_reg <- lm(formula = bprs ~ week + treatment, data = BPRSL)
+summary(BPRSL_reg) # print model summary
+
+```
+The linear regression analysis ignoring the longitudinal data structure shows that treatment 2 dependent on the variable week does not differ significantly from treatment 1 - because of a p-value of 0.661. In comparison to this, the variable week seems to have a negative impact on bprs value that is highly significant. 
+
+### Random Intercept model and random Inetercept and Random Slope Model
+
+```{r}
+# fit random intercept model
+BPRSL_ref <- lmer(bprs ~ week + treatment + (1 | subject), data = BPRSL, REML = FALSE)
+summary(BPRSL_ref) # print summary
+
+# fit random intercept and slope model
+BPRSL_ref1 <- lmer(bprs ~ week + treatment + (week | subject), data = BPRSL, REML = FALSE)
+
+# perform an ANOVA test on the two models
+anova(BPRSL_ref1, BPRSL_ref)
+
+```
+
+The random intercept model allows some variation in the intercepts for each person. The Random effects standard deviation of subject is ~6.8. 
+The random intercept and random slope models allows differentiation in intercepts and slopes to account for differences between persons and within the time period.
+The models differ significantly from each other: the  p-value is far below 0.05. The lower the chis-suqare value should be as low as possible to indicate a better fit in comparison to the other model. All in all, I would prefer the model BPRSL_ref1. 
+
+
+### Random Intercept and Random Slope Model with interaction
+
+```{r}
+# fit random intercept and slope model with added interaction
+BPRSL_ref2 <- lmer(bprs ~ week + treatment + week * treatment + (week | subject), data = BPRSL, REML = FALSE)
+summary(BPRSL_ref2) # print summary
+anova(BPRSL_ref2, BPRSL_ref1)
+
+# plot observed values 
+ggplot(BPRSL, aes(x = week, y = bprs, linetype = subject)) +
+  geom_line() + 
+  facet_wrap(~treatment)
+
+# add fitted values from best model
+Fitted <- fitted(BPRSL_ref1)
+BPRSL <- BPRSL %>% mutate(fit = Fitted)
+
+# plot observed and fitted values 
+ggplot(BPRSL, aes(x = week, y = fit, linetype = subject)) +
+  geom_line() + 
+  facet_wrap(~treatment) + 
+  geom_line(aes(x = week, y = bprs, linetype = subject), color = 'red')
+
+```
+
+We added interactions of week and treatment to the Random Intercept and Random Slope Model. After computing the table of variance by accessing the summary of the anova I suggest that the model does not differ significantly from the other model because the p value is higher than 0.05. Nevertheless, the fit should be slightly better because of the lower Chisq value in comparison to above. All in all, I wouldn't go on with the model including interaction but rather with the more parsimonous model without the interaction. Afterwards, I used the fitted values to show the model performance in comparison to the real values. 
